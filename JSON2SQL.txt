@@ -1,0 +1,104 @@
+{
+    "options":
+    {
+        "table_name_case":"upper",
+        "column_name_case":"lower",
+        "key_name_case":"lower",
+        "force_abbreviations":false, //if this is "true" abbreviations will be used regardless of length
+        "foreign_key_prefix":"fk",
+        "primary_key_prefix":"pk",
+        "unique_key_prefix":"uk",
+        "index_prefix":"ix",
+        "word_separator":"_", //used to separate words in table, column, etc names
+        "index_foreign_keys":true, //default setting, indexes foreign key columns
+    }
+
+{"abbreviations":
+    //Abbreviations will be used to keep the name field of tables and columns at the maximum of 30 characters
+    [{"key":"COMPACT_DISK":"value":"CD"},{"key":"ABILITY":"value":"ABL"}]
+},
+{"tables":
+    [
+        {"name":"TABLE_NAME",
+       //"hasPrimaryKey":false //optional attribute to stop creation of a primary key
+         "columns":
+            [
+//                { //By default a primary key named "id" of type "Integer" with a sequence will be created for all tables.
+                    //"name":"id", //default column name for primary key is "id"
+                    //"type":"Integer" //this is implied with a primary key, can be overridden
+                    //"isPrimaryKey":true,
+                    //"PrimaryKeyName":"pk_table_name_id", //default value is pk_<table_name>_<column_name>
+                    //"sequenceName":"table_name_column_name_seq", //default value is <table_name>_<column_name>_seq
+//                },
+                {
+                    "name":"<column name 2>", //column 1 is the id
+                    "type":"String",
+                    "length":<number>, //valid if type is String
+                    "isUnique":true,
+                    //"isIndexed":false, //default setting is "false" unless column is used as a foriegn key, then it will have an index unless explicitly set to "false"
+                    //"uniqueName":"uk_table_name_column_name_2", //default value is uk_<table_name>_<column_name>
+                }
+                {
+                    "name":"<column name 3>",
+                    //"type":"Integer", //type is inferred by using the foreign column's type
+                    "isForeignKey":true,
+                    //"foreignKeyName":"fk_table_name_column_name_3" //default value is fk_<table_name>_<foreign_table_name>_<foreign_column_name>
+                    "foreignTable":"foreign_table_name",
+                    "foreignColumn":"foreign_column_name"
+
+                }
+            ]
+        }
+    ]
+}
+
+How abbreviations work:
+for(table : tables){
+    table.name = checkNameLength(table.name, 30);
+    for(column : table.columns){
+        column.name = checkNameLength(column.name, 30);
+        for(key : column.keys){
+            //keys are all generated names for constraints(pk, uk, fk, ik) and sequences 
+            key.name = checkNameLength(key.name, 30);
+        }
+    }
+}
+
+function checkNameLength(var name, int maxLength){
+    var newName = '';
+    if(name.length > maxLength || forceAbbreviations){
+        var words = name.split(wordSeparator);
+        for(var i = 0; i < words.size(); i++){
+            var word = words[i];
+            if(exists(abbreviations[word])){
+                newName += abbreviations[word];
+            }else{
+                newName += word;
+            }
+            if(i < words.size-1){
+                newName += '_';
+            }
+        }
+        if(newName.length > 30){
+            throw new NameLengthExceeds("The table, column, or key name exceeds "+maxLength+" characters: "+name);
+        }
+    }else{
+        newName = name;
+    }
+
+    return newName;
+}
+
+
+
+Column Data Types:
+String
+Integer
+Decimal
+Long
+Boolean
+Date
+Time
+Datetime
+BLOB
+CLOB

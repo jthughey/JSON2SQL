@@ -1,0 +1,96 @@
+<html>
+    <head>
+        <script type="text/JavaScript" src="./json2sql.js"></script>
+    </head>
+    <body>
+        <div id="out"></div>
+    </body>
+    <script type="text/JavaScript">
+    try{
+        var j2s = new JSON2SQL();
+        j2s.generateSQL({
+            "abbreviations":
+            [
+                {"Protocol":"PCL"},
+                {"Subject":"SUBJ"},
+                {"Calendar":"CAL"}
+            ],
+            "tables":
+            [
+                {
+                    "name":"Protocol",
+                    "columns":
+                    [
+                        {
+                            "name":"protocol_no",
+                            "type":"String",
+                            "length":255,
+                            "nullable":false,
+                            "isUnique":true
+                        },
+                        {
+                            "name":"title",
+                            "type":"String", 
+                            "length":255,
+                            "isUnique":true
+                        },
+                        {
+                            "name":"created_by",
+                            "foreignKey":true,
+                            "foreignTable":"User",
+                            "foreignColumn":"Id",
+                            "nullable":false
+                        },
+                        {
+                            "name":"created_date",
+                            "type":"Date",
+                            "nullable":false
+                        }
+                    ]
+                 },
+                {
+                    "name":"User",
+                    "columns":
+                    [
+                        {
+                            "name":"username",
+                            "type":"String",
+                            "length":255,
+                            "isUnique":true,
+                        }
+                    ]
+                },
+                {
+                    "name":"Protocol_User",
+                    "columns":
+                    [
+                        {
+                            "name":"user_id",
+                            "foreignKey":true,
+                            "foreignTable":"user",
+                            "foreignColumn":"id"
+                        },
+                        {
+                            "name":"protocol_id",
+                            "foreignKey":true,
+                            "foreignTable":"protocol",
+                            "foreignColumn":"id"
+                        }
+                    ],
+                    "constraints":
+                    [
+                        {
+                            "name":"Protocol_User",
+                            "type":"Unique",
+                            "columns":["user_id", "protocol_id"]
+                        }
+                    ]
+                }
+            ]
+            });
+        
+    }catch(e){
+        console.log("ERROR: "+e);
+    }
+    </script>
+</html>
