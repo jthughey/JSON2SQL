@@ -57,6 +57,12 @@ JSON2SQL.prototype = {
        "default":"ix"
       },
       {
+        "name":"sequence_postfix",
+       "description":"String to postfix all sequences with.",
+       "values":[],
+       "default":"seq"
+      },
+      {
         "name":"word_separator",
         "description":"Character(s) used to separate words in names, example: table_name <- '_' is the separator.",
         "values":[],
@@ -75,9 +81,9 @@ JSON2SQL.prototype = {
        "default":30
       }
     ],
+    dataTypes : [ "String", "Integer", "Decimal", "Long", "Boolean", "Date", "Time", "Datetime", "CLOB", "BLOB"],
     options : {},
     abbreviations : [],
-    tableNames : [],
     debug : true,
     logFunc : null
 };
@@ -164,7 +170,7 @@ JSON2SQL.prototype.generateSQL = function(data){
   'use strict';
   this.loadOptions(data);
   this.loadAbbreviations(data);
-  this.loadTableNames(data);
+  this.loadTables(data);
 };
 
 JSON2SQL.prototype.loadOptions = function(data){
@@ -202,31 +208,113 @@ JSON2SQL.prototype.loadAbbreviations = function(data){
   }
 };
 
-JSON2SQL.prototype.loadTableNames = function(data){
+JSON2SQL.prototype.loadTables = function(data){
   'use strict';
   var tables = data["tables"];
-  if(tables === void 0){
+  var tableNames = [];
+  if(this.notDefined(tables)){
     this.log("No tables defined.");
   }else{
-    for(var i = 0; i < tables.length; i++){
-      var table = tables[i];
-      var name = this.tableCase(table["name"]);
-      if(this.contains(this.tableNames, name)){
-        throw "Duplicate table declaration: "+table["name"];
+    for(var t = 0; t < tables.length; t++){
+      //Update the table...
+      var table = updateTableName(tables[t], tableNames);
+
+      //Update the table's columns...
+      var columns = table["columns"];
+      this.createPrimaryKey(table);
+
+      table["columnNames"] = [];
+      for(var c = 0; c < columns.length; c++){
+        var column = updateColumnName(column[c], table);
       }
-      this.tableNames.push(this.tableCase(table["name"]));
     }
   }
-  this.log(this.tableNames);
-}
+  this.log(tableNames);
+};
 
-JSON2SQL.prototype.abbreviate = function(name){
+JSON2SQL.prototpe.updateTableName = function (table, tableNames) {
+  var name = this.abbreviate(this.tableCase(table["name"]));
+  if(this.contains(tableNames, name)){
+    //do this after the abbreviation to catch already abbreviated names
+    throw "Duplicate table declaration: "+table["name"];
+  }
+  tableNames.push(name);
+  table["name"] = name;
+  return table;
+};
+
+JSON2SQL.prototpe.updateColumnName = function (column, table) {
+  var name = this.abbreviate(this.columnCase(column["name"]));
+  if(this.contains(table["columnNames"], name)){
+    //do this after the abbreviation to catch already abbreviated names
+    throw "Duplicate column declaration: " + column["name"] + "for table "+table["name"];
+  }
+  table["columnNames"].push(name);
+  column["name"] = name;
+  return column;
+};
+
+JSON2SQL.prototype.createPrimaryKey = function (table) {
+  if(!hasPrimaryKey(table)){
+    var keyColumn = {};
+    keyColumn["name"] = this.columnCase("id");
+    keyColumn["type"] = "Integer";
+    keyColumn["isPrimaryKey"] = true;
+    keyColumn["primaryKeyName"] = this.getPrefixKey("primary_key_prefix", table, keyColumn);
+    keyColumn["sequenceName"] = this.getPostfixKey("sequence_postfix", table, keyColumn);
+    table["columns"].push(keyColumn);
+  }
+};
+
+JSON2SQL.prototype.getPrefixKey = function (prefixOption, table, column) {
+  var prefix = this.options[prefixOption];
+  var separator = this.getWordSeparator();
+  var key = prefix + separator + table["name"] + separator + column["name"];
+  if(key.length > this.getMaxNameLength()){
+    throw new NameLengthExceeds("Key with option type " + prefixOption + " and name " + key + " exceeds max length "
+    + this.getMaxNameLength());
+  }
+  return this.keyCase(key);
+};
+
+JSON2SQL.prototype.getPostfixKey = function (postfixOption, table, column) {
+  var postfix = this.options[postfixOption];
+  var separator = this.getWordSeparator();
+  var key = table["name"] + separator + column["name"] + separator + postfix;
+  if(key.length > this.getMaxNameLength()){
+    throw new NameLengthExceeds("Key with option type " + postfixOption + " and name " + key + " exceeds max length "
+    + this.getMaxNameLength());
+  }
+  return this.keyCase(key);
+};
+
+JSON2SQL.prototype.hasPrimaryKey = function (table) {
+  var hasPrimaryKey = false;
+  for(var c = 0; c < columns.length; c++){
+    var column = columns[c];
+    if(!this.notDefined(column["isPrimaryKey"])){
+      //primary key already defined
+      if(hasPrimaryKey){
+        //Check to make sure there is't more than one primary key column...
+        throw new DuplicatePrimaryKey("Duplicate primary keys exist for table: "+table["name"]);
+      }
+      if(column["isPrimaryKey"]){
+        //it is defined, not duplicate, and the value is "true"
+        hasPrimaryKey = true;
+      }
+    }
+  }
+  return hasPrimaryKey;
+};
+
+
+JSON2SQL.prototype.abbreviate = function (name) {
   'use strict';
   var newName = '';
   var origName = name.toLowerCase();
-  var max = this.options["max_name_length"];
+  var max = this.getMaxNameLength();
   var forceAbbr = this.options["force_abbreviations"];
-  var wordSeparator = this.options["word_separator"];
+  var wordSeparator = this.getWordSeparator();
   if(origName.length > max || forceAbbr){
       var words = origName.split(wordSeparator);
       for(var i = 0; i < words.size(); i++){
@@ -240,7 +328,7 @@ JSON2SQL.prototype.abbreviate = function(name){
               newName += wordSeparator;
           }
       }
-      if(newName.length > 30){
+      if(newName.length > max){
           throw new NameLengthExceeds("Abbreviated, the table, column, or key name exceeds "+max+" characters: "+name);
       }
   }else{
@@ -272,9 +360,21 @@ JSON2SQL.prototype.toCase = function(str, aCase){
   return str.toLowerCase();
 };
 
+JSON2SQL.prototype.getWordSeparator = function(){
+  return this.options["word_separator"];
+}
+
+JSON2SQL.prototype.getMaxNameLength = function(){
+  return this.options["max_name_length"];
+}
+
 JSON2SQL.prototype.isString = function(obj){
   return Object.prototype.toString.call(obj) == '[object String]';
 };
+
+JSON2SQL.prototype.notDefined = function(obj){
+  return obj === void 0;
+}
 
 function JSON2SQL(){
     this.init();
