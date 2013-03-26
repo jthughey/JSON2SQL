@@ -83,7 +83,8 @@ JSON2SQL.prototype = {
 };
 
 /**
- * Log the provided object 
+ * Log the provided object.
+ * @param obj the object to log
  */
 JSON2SQL.prototype.log = function(obj){
   'use strict';
@@ -225,6 +226,7 @@ JSON2SQL.prototype.abbreviate = function(name){
   var origName = name.toLowerCase();
   var max = this.options["max_name_length"];
   var forceAbbr = this.options["force_abbreviations"];
+  var wordSeparator = this.options["word_separator"];
   if(origName.length > max || forceAbbr){
       var words = origName.split(wordSeparator);
       for(var i = 0; i < words.size(); i++){
@@ -235,11 +237,11 @@ JSON2SQL.prototype.abbreviate = function(name){
               newName += word;
           }
           if(i < words.size-1){
-              newName += '_';
+              newName += wordSeparator;
           }
       }
       if(newName.length > 30){
-          throw new NameLengthExceeds("The table, column, or key name exceeds "+max+" characters: "+name);
+          throw new NameLengthExceeds("Abbreviated, the table, column, or key name exceeds "+max+" characters: "+name);
       }
   }else{
       newName = origName;
