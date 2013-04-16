@@ -149,8 +149,6 @@ JSON2SQL.prototype.describeOptions = function() {
   this.log("##END OPTIONS##");
 };
 
-
-
 JSON2SQL.prototype.isValidOptionValue = function(name, value) {
   'use strict';
   for(var i = 0; i < this.optionDefinitions.length; i++){
@@ -223,10 +221,13 @@ JSON2SQL.prototype.loadTables = function(data){
       var columns = table["columns"];
       this.createPrimaryKey(table);
 
+      table["sql"] = 'CREATE TABLE '+ table.name + ' ( ';
       table["columnNames"] = [];
       for(var c = 0; c < columns.length; c++){
         var column = updateColumnName(column[c], table);
       }
+      createSQL(table);
+      table["sql"] += ' )';
     }
   }
   this.log(tableNames);

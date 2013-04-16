@@ -31,7 +31,7 @@
                     //"sequenceName":"table_name_column_name_seq", //default value is <table_name>_<column_name>_seq
 //                },
                 {
-                    "name":"<column name 2>", //column 1 is the id
+                    "name":"<column name 2>", //column 2, column 1 is the id
                     "type":"String",
                     "length":<number>, //valid if type is String
                     "isUnique":true,
